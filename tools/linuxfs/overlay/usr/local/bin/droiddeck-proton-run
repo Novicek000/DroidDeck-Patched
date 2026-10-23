@@ -17,8 +17,7 @@ Windows launch option from appinfo.vdf when no program is given, else the progra
 shortcut's own prefix, started in --dir with the shortcut's launch options (--options).
 --regedit opens Wine's registry editor in that game's prefix instead of a program, so a .reg file
 can be imported into it (Registry > Import Registry File). It runs inside a Wine virtual desktop
-the size of the session, because its own window under gamescope had the menu bar cut off at the
-top of the screen.
+the size of the session, with its title bar and menu bar (see REGEDIT_GAME_ID).
 """
 import json
 import os
@@ -36,6 +35,11 @@ STATE = os.path.join(HOME, ".local", "share", "droiddeck-compat", "state.json")
 EXTRA_LIBRARIES = ("/mnt/droiddeck", "/mnt/droiddeck-sd")
 SYSTEM_TOOLS = ("/usr/share/steam/compatibilitytools.d", "/usr/local/share/steam/compatibilitytools.d")
 VERB = "waitforexitandrun"
+# Under gamescope (window manager "steamcompmgr") Proton's win32u gives windows no non-client area -
+# no title bar and no menu bar - except for the SteamGameIds listed in adjust_window_rect() and
+# handle_nc_calc_size() (dlls/win32u/defwnd.c, proton_10.0 to proton_11.0 and experimental). 613830
+# is on both lists and nothing else in Proton or its Wine reads it.
+REGEDIT_GAME_ID = "613830"
 SHORTCUT_BIT = 0x80000000
 STEAM_APP_LIMIT = 2 ** 31
 
@@ -464,6 +468,8 @@ def main(argv):
     os.makedirs(target.compatdata, exist_ok=True)
     env = environment(os.environ, target, folder, root, window)
     env.update(extra)
+    if regedit:
+        env["SteamGameId"] = REGEDIT_GAME_ID
     say("%s with %s (%s), %s prefix %s%s" % (program, name, why, target.kind, target.compatdata,
                                               ", without the Steam client" if app is not None else ""))
     try:
