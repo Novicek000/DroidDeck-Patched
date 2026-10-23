@@ -517,7 +517,7 @@ internal fun LaunchSettings(s: FrontEndState, a: FrontEndActions, host: MenuHost
     val wincompPicks = remember(wincompKey, wincompOpen) { wincompKey?.let { com.droiddeck.launcher.session.WinComponents.picks(context, it) }.orEmpty() }
     val steamScope = game?.let { com.droiddeck.launcher.session.NoSteamLaunch.scope(it) }
     val steamCard: (@Composable (Modifier) -> Unit)? = if (game != null && steamScope != null) { m ->
-        Box(m) { GameSettingsCard(host, game, steamScope) }
+        Box(m) { GameSettingsCard(host, game, steamScope, a.onRegedit) }
     } else null
     val cards = if (game?.library == com.droiddeck.launcher.frontend.Library.EPIC_LAUNCHER) listOfNotNull(steamCard) else buildList<@Composable (Modifier) -> Unit> {
         add { m ->
@@ -570,7 +570,10 @@ internal fun LaunchSettings(s: FrontEndState, a: FrontEndActions, host: MenuHost
 }
 
 @Composable
-private fun GameSettingsCard(host: MenuHost, game: com.droiddeck.launcher.frontend.Library.SteamGame, scope: String) {
+private fun GameSettingsCard(
+    host: MenuHost, game: com.droiddeck.launcher.frontend.Library.SteamGame, scope: String,
+    onRegedit: (com.droiddeck.launcher.frontend.Library.SteamGame) -> Unit = {},
+) {
     val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val colors = MaterialTheme.colorScheme
     var config by remember(scope) { mutableStateOf(runCatching { com.droiddeck.launcher.session.GameEnvironmentStore.read(appContext) }.getOrNull()) }
@@ -637,6 +640,11 @@ private fun GameSettingsCard(host: MenuHost, game: com.droiddeck.launcher.fronte
                 },
                 trailing = { Text("›", fontSize = 16.sp, color = colors.onSurfaceVariant) },
             ) { host.open = syncKey }
+            MenuItem(stringResource(R.string.game_regedit_title), checked = false,
+                detail = stringResource(R.string.game_regedit_detail)) {
+                host.open = null
+                onRegedit(game)
+            }
         }
         MenuItem(stringResource(R.string.game_settings_default), checked = false, enabled = ready,
             detail = stringResource(R.string.game_settings_default_detail)) {

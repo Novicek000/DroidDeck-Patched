@@ -589,6 +589,40 @@ class FrontEndActivity : ComponentActivity() {
         return true
     }
 
+    private fun launchRegedit(game: Library.SteamGame) {
+        if (protons.protonBusyId != null || ProtonExtras.installInProgress || pkgStage != null) {
+            android.widget.Toast.makeText(this, R.string.main_wait_install_game, android.widget.Toast.LENGTH_SHORT).show()
+            return
+        }
+        val app = applicationContext
+        Thread({
+            val added = if (game.library == Library.ADDED) runCatching { com.droiddeck.launcher.session.NoSteamLaunch.addedGame(app, game) }.getOrNull() else null
+            val command = com.droiddeck.launcher.session.NoSteamLaunch.regeditCommand(game, added)
+            ui.post {
+                if (isDestroyed) return@post
+                if (command == null) {
+                    android.widget.Toast.makeText(this, R.string.game_link_failed, android.widget.Toast.LENGTH_LONG).show()
+                    return@post
+                }
+                com.droiddeck.launcher.session.NoSteamLaunch.remember(command)
+                val next = Intent(this, SessionActivity::class.java)
+                    .putExtra(SessionActivity.EXTRA_RETURN_HOME, false)
+                    .putExtra(SessionService.EXTRA_MODE, SessionService.MODE_RUN)
+                    .putExtra(SessionService.EXTRA_PROGRAM, command.program)
+                    .putExtra(SessionService.EXTRA_PROGRAM_ARGS, command.args.toTypedArray())
+                when {
+                    !SessionState.running -> startSessionOrWait(next)
+                    SessionState.stopRequested -> android.widget.Toast.makeText(this, R.string.game_link_session_busy, android.widget.Toast.LENGTH_LONG).show()
+                    SessionState.mode == SessionService.MODE_RUN && SessionState.program == command.program && SessionState.programArgs == command.args ->
+                        startActivity(Intent(this, SessionActivity::class.java).setAction(SessionService.ACTION_RESUME)
+                            .putExtra(SessionActivity.EXTRA_RETURN_HOME, false)
+                            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP))
+                    else -> pendingSwitch = next
+                }
+            }
+        }, "regedit-launch").start()
+    }
+
     private fun opensEpicLauncher(next: Intent): Boolean =
         next.getStringExtra(SessionService.EXTRA_PROGRAM) == com.droiddeck.launcher.session.NoSteamLaunch.EPIC ||
             next.getStringExtra(SessionService.EXTRA_STEAM_URL) == com.droiddeck.launcher.frontend.GameLaunchLink.steamUrl(
@@ -927,6 +961,7 @@ class FrontEndActivity : ComponentActivity() {
                         onProtons = { openProtons() },
                         onComponents = { focusContent -> openComponents(focusContent) },
                         onGameComponents = { game -> openComponents(gameKey = game.profileKey) },
+                        onRegedit = { game -> launchRegedit(game) },
                         onComponentsTab = { tab -> openComponents(focusContent = true, tab = tab) },
                         onSaveImport = { sg -> importSaves(sg.name) { GameSaves.game(sg) } },
                         onSaveExport = { sg, layout -> exportSaves(sg.name, layout) { GameSaves.game(sg) } },

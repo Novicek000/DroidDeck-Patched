@@ -3,6 +3,7 @@
 
     droiddeck-proton-run [--window] PROGRAM [ARGS...]
     droiddeck-proton-run --app ID [--dir FOLDER] [--options TEXT] [PROGRAM [ARGS...]]
+    droiddeck-proton-run --regedit --app ID [--dir FOLDER]
 
 The program belongs to an installed Steam game when it sits in one's folder, to a prefix when it
 sits in one's drive_c, or to a non-Steam shortcut that names it; any other program gets a prefix of
@@ -14,6 +15,8 @@ the STEAM_COMPAT_* environment - so its wrapper applies the game's settings, com
 --app starts one game without the Steam client (its Start without Steam): a Steam game's default
 Windows launch option from appinfo.vdf when no program is given, else the program in that
 shortcut's own prefix, started in --dir with the shortcut's launch options (--options).
+--regedit opens Wine's registry editor in that game's prefix instead of a program, so a .reg file
+can be imported into it (File > Import).
 """
 import json
 import os
@@ -329,6 +332,17 @@ def shortcut_target(appid, program, start, root):
                   "shortcut", start if start and os.path.isdir(start) else None)
 
 
+def regedit_target(appid, start, root):
+    """The prefix the registry editor opens: an installed Steam game's, else the shortcut's own."""
+    if int(appid) >= STEAM_APP_LIMIT:
+        folder = start if start and os.path.isdir(start) else root
+        return Target(appid, os.path.join(root, "steamapps", "compatdata", str(appid)), folder, root, "shortcut")
+    library, install = steam_install(appid, root)
+    if not install or not os.path.isdir(install):
+        return None
+    return Target(appid, os.path.join(library, "steamapps", "compatdata", str(appid)), install, library, "steam")
+
+
 def steam_launches(target, program, root):
     """Whether a launch option of the Steam game starts [program]: then Steam should start it."""
     if target.kind != "steam":
@@ -372,11 +386,14 @@ def arguments(program, args):
 
 def main(argv):
     window = False
+    regedit = False
     app, start, options = None, None, ""
     while argv and argv[0].startswith("--"):
         option = argv.pop(0)
         if option == "--window":
             window = True
+        elif option == "--regedit":
+            regedit = True
         elif option in ("--app", "--dir", "--options") and argv:
             value = argv.pop(0)
             if option == "--app":
@@ -393,12 +410,21 @@ def main(argv):
     if app is not None and not (app.isdigit() and 0 < int(app) < 2 ** 32):
         say("%s is not an app id" % app)
         return 2
+    if regedit and (app is None or argv):
+        say("usage: droiddeck-proton-run --regedit --app ID [--dir FOLDER]")
+        return 2
     if not argv and app is None:
         say("usage: droiddeck-proton-run [--window] PROGRAM [ARGS...]")
         return 2
     root = os.environ.get("STEAM_COMPAT_CLIENT_INSTALL_PATH") or STEAM_ROOT
     extra, args = split_options(options)
-    if not argv:
+    if regedit:
+        target = regedit_target(app, start, root)
+        if target is None:
+            say("Steam game %s is not installed" % app)
+            return 2
+        program, args = "regedit", []
+    elif not argv:
         if int(app) >= STEAM_APP_LIMIT:
             say("shortcut %s needs its program" % app)
             return 2

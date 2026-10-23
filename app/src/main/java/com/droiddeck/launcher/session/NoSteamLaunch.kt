@@ -41,6 +41,16 @@ object NoSteamLaunch {
         game.name,
     )
 
+    fun regeditCommand(game: Library.SteamGame, added: AddedGames.Game?): Command? = when {
+        game.library == Library.EPIC_LAUNCHER -> null
+        game.library == Library.ADDED -> added?.let { a ->
+            a.steamAppId?.let { Command(PROTON_RUN, listOf("--regedit", "--app", it.toString()), a.name) }
+                ?: Command(PROTON_RUN, listOf("--regedit", "--app", (a.appId and 0xFFFFFFFFL).toString(), "--dir", a.guestDir), a.name)
+        }
+        game.appId > 0 -> Command(PROTON_RUN, listOf("--regedit", "--app", game.appId.toString()), game.name)
+        else -> null
+    }
+
     fun settingsId(game: AddedGames.Game): Long = (game.steamAppId?.toLong() ?: game.appId) and 0xFFFFFFFFL
 
     fun addedGame(context: Context, game: Library.SteamGame): AddedGames.Game? {
