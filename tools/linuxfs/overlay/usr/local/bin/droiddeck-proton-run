@@ -16,7 +16,9 @@ the STEAM_COMPAT_* environment - so its wrapper applies the game's settings, com
 Windows launch option from appinfo.vdf when no program is given, else the program in that
 shortcut's own prefix, started in --dir with the shortcut's launch options (--options).
 --regedit opens Wine's registry editor in that game's prefix instead of a program, so a .reg file
-can be imported into it (File > Import).
+can be imported into it (Registry > Import Registry File). It runs inside a Wine virtual desktop
+the size of the session, because its own window under gamescope had the menu bar cut off at the
+top of the screen.
 """
 import json
 import os
@@ -343,6 +345,15 @@ def regedit_target(appid, start, root):
     return Target(appid, os.path.join(library, "steamapps", "compatdata", str(appid)), install, library, "steam")
 
 
+def regedit_command(env):
+    """explorer /desktop=regedit,WxH regedit: the editor in a virtual desktop the session's size."""
+    size = []
+    for name, default in (("BL_WIDTH", 1280), ("BL_HEIGHT", 720)):
+        value = env.get(name, "")
+        size.append(int(value) if value.isdigit() and 320 <= int(value) <= 16384 else default)
+    return "explorer", ["/desktop=regedit,%dx%d" % tuple(size), "regedit"]
+
+
 def steam_launches(target, program, root):
     """Whether a launch option of the Steam game starts [program]: then Steam should start it."""
     if target.kind != "steam":
@@ -423,7 +434,7 @@ def main(argv):
         if target is None:
             say("Steam game %s is not installed" % app)
             return 2
-        program, args = "regedit", []
+        program, args = regedit_command(os.environ)
     elif not argv:
         if int(app) >= STEAM_APP_LIMIT:
             say("shortcut %s needs its program" % app)
