@@ -1,3 +1,49 @@
+# DroidDeck Patched
+
+**An unofficial fork of [DroidDeck](https://github.com/Droid-Deck/DroidDeck)** with a few small changes on top of upstream release **0.6.0**. It is not made, reviewed or supported by the DroidDeck team, and is not affiliated with Valve. Please report problems with this fork [here](../../issues), not to DroidDeck's Discord or issue tracker.
+
+## What is different from DroidDeck
+
+- **Registry editor per game.** A game's **Settings** card has **Registry editor (regedit)**. It opens Wine's `regedit` in that game's own prefix, with the same Proton the game uses, inside a Wine desktop the size of the screen. Use it to import a `.reg` file: **Registry › Import Registry File…**. The phone's storage is drive `Z:`, for example `Z:\storage\emulated\0\Download\file.reg`. Works for Steam games, added games and GOG / Epic / Amazon games.
+- **Name:** the app is called **DroidDeck Patched**.
+- **Updates:** the Updates page has only the **Stable** channel. It offers the [latest release of this repository](../../releases/latest) that has an APK. The download is checked against the SHA-256 GitHub publishes for it, then against the package name and signing certificate before Android installs it. Preview and test builds of upstream DroidDeck are not offered.
+
+Everything else is DroidDeck 0.6.0 unchanged. The changes are the commits on the default branch after upstream's `0.6.0` tag.
+
+## Installing
+
+Download the APK from [Releases](../../releases). It keeps DroidDeck's package name (`com.droiddeck.launcher`), so it replaces DroidDeck rather than installing beside it.
+
+Releases are signed with the AOSP test key in [`keystore/testkey.p12`](keystore/testkey.p12), the same key DroidDeck's own local and preview builds use. The official DroidDeck releases use a different key, so **uninstall the official DroidDeck first**. This deletes its data: the runtime, your Steam login and games stored inside the app. Because the test key is public, the app installs updates only from this repository's releases over HTTPS and checks each file's SHA-256.
+
+## Building
+
+`patched/build-release.sh` builds the release APK from this checkout. It needs git, Python 3, curl, JDK 17 and the Android SDK (`ANDROID_HOME`), but no Docker:
+
+```sh
+patched/build-release.sh   # -> patched/out/DroidDeck-Patched-<version>.apk
+```
+
+It compiles the app's Kotlin/Java code and resources and puts them, together with any changed session helper script, into the official upstream APK named in [`patched/upstream.env`](patched/upstream.env). Every native library and Linux runtime file therefore stays byte-for-byte upstream's. The script refuses to run when the branch changes something it cannot carry this way (native code, runtime components): build such a change with upstream's full build, `tools/build_local.sh`, described below.
+
+To publish an update: raise `versionName` (`<upstream version>-patched.<n>`) and `versionCode` (`<upstream versionCode>` × 100 + `<n>`) in `app/build.gradle`, commit, run the script, and create a GitHub release with the tag `v<versionName>` and the APK attached (not a pre-release). Installed copies find it on their Updates page.
+
+## Licence and credits
+
+DroidDeck is © its authors and licensed under the [GPL-3.0](LICENSE); this fork is distributed under the same licence, and its complete source is this repository. All credit for DroidDeck goes to its authors and the projects they credit below. Steam and Proton belong to Valve Corporation.
+
+<details>
+<summary><b>Po polsku</b></summary>
+
+Nieoficjalny fork [DroidDecka](https://github.com/Droid-Deck/DroidDeck) (wersja bazowa 0.6.0). Różnice: w karcie **Ustawienia** gry jest **Edytor rejestru (regedit)**, który otwiera regedit w prefiksie tej gry, żeby wgrać plik `.reg` (*Registry › Import Registry File…*, pamięć telefonu to dysk `Z:`). Aplikacja nazywa się **DroidDeck Patched**, a aktualizacje mają tylko kanał **Stable** pobierany z wydań tego repozytorium. Reszta to niezmieniony DroidDeck 0.6.0.
+
+APK jest podpisany kluczem testowym AOSP, więc przed instalacją trzeba odinstalować oficjalny DroidDeck. To usuwa jego dane. Błędy forka zgłaszaj tutaj, nie autorom DroidDecka.
+</details>
+
+---
+
+*The original DroidDeck README follows.*
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="artwork/droiddeck-banner-dark.svg">
