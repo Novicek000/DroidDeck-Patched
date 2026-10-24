@@ -40,7 +40,7 @@ object SelfInstaller {
             if (!apk.sha256.equals(Hashes.sha256(target), ignoreCase = true)) {
                 throw IOException(context.getString(R.string.selfinst_checksum_mismatch))
             }
-            validateDownloaded(context, target, apk)
+            validateDownloaded(context, target)
         } catch (e: Exception) {
             FileUtils.delete(target)
             throw e
@@ -48,13 +48,7 @@ object SelfInstaller {
         return target
     }
 
-    private fun validateDownloaded(context: Context, file: File, apk: AppUpdates.Apk) {
-        if (apk.packageName != context.packageName) {
-            throw IOException(context.getString(R.string.selfinst_wrong_package, apk.packageName, context.packageName))
-        }
-        if (!apk.signerSha256.equals(BuildConfig.RELEASE_SIGNER, ignoreCase = true)) {
-            throw IOException(context.getString(R.string.selfinst_metadata_signer))
-        }
+    private fun validateDownloaded(context: Context, file: File) {
         @Suppress("DEPRECATION")
         val flags = if (Build.VERSION.SDK_INT >= 28) {
             // Android 9 and 10 only collect an archive's certificates when GET_SIGNATURES is set.
@@ -69,9 +63,6 @@ object SelfInstaller {
         }
         @Suppress("DEPRECATION")
         val code = if (Build.VERSION.SDK_INT >= 28) info.longVersionCode else info.versionCode.toLong()
-        if (code != apk.versionCode.toLong()) {
-            throw IOException(context.getString(R.string.selfinst_version_mismatch, code, apk.versionCode))
-        }
         if (code < BuildConfig.VERSION_CODE.toLong()) {
             throw IOException(context.getString(R.string.selfinst_downgrade, code, BuildConfig.VERSION_CODE))
         }

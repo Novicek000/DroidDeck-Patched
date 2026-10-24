@@ -20,7 +20,6 @@ import com.droiddeck.launcher.update.SelfInstaller
 
 internal class UpdatesMenu(private val activity: Activity, private val ui: Handler) {
     var catalog by mutableStateOf<AppUpdates.Catalog?>(null)
-    var follow by mutableStateOf(AppUpdates.Follow(AppUpdates.Channel.STABLE))
     var checking by mutableStateOf(false)
     var error by mutableStateOf<String?>(null)
     var stage by mutableStateOf<String?>(null)
@@ -30,11 +29,10 @@ internal class UpdatesMenu(private val activity: Activity, private val ui: Handl
     private var lastCheck = 0L
     private var request = 0
 
-    fun state() = UpdatesState(catalog, follow, checking, error, stage, percent, askPermission)
+    fun state() = UpdatesState(catalog, checking, error, stage, percent, askPermission)
 
     fun actions() = UpdatesActions(
         onCheck = { check(force = true) },
-        onFollow = ::choose,
         onInstall = ::install,
         onAllowInstalls = {
             askPermission = false
@@ -44,7 +42,7 @@ internal class UpdatesMenu(private val activity: Activity, private val ui: Handl
         onDismissPermission = { askPermission = false; pending = null },
     )
 
-    val hasUpdate: Boolean get() = AppUpdates.hasUpdate(catalog, follow)
+    val hasUpdate: Boolean get() = AppUpdates.hasUpdate(catalog)
 
     fun onResume() {
         pending?.let { r ->
@@ -67,23 +65,15 @@ internal class UpdatesMenu(private val activity: Activity, private val ui: Handl
                 checking = false
                 result.onSuccess {
                     catalog = it
-                    follow = AppUpdates.follow(activity, it)
                     error = null
                 }.onFailure { if (force) error = activity.getString(R.string.upd_couldnt_check, it.message ?: it.javaClass.simpleName) }
             }
         }, "app-updates").start()
     }
 
-    private fun choose(f: AppUpdates.Follow) {
-        AppUpdates.setFollow(activity, f)
-        follow = f
-        error = null
-    }
-
     private fun install(r: AppUpdates.Release) {
         if (stage != null) return
         val apk = r.apk ?: run { error = activity.getString(R.string.upd_no_download); return }
-        AppUpdates.installBlock(r)?.let { error = it.message(activity); return }
         if (SessionState.running) { error = activity.getString(R.string.upd_stop_first); return }
         if (!SelfInstaller.canInstall(activity)) { pending = r; askPermission = true; return }
         error = null
@@ -120,7 +110,6 @@ internal class UpdatesMenu(private val activity: Activity, private val ui: Handl
 
     fun start() {
         catalog = AppUpdates.cached(activity)
-        follow = AppUpdates.follow(activity, catalog)
         val filter = IntentFilter(SelfInstaller.ACTION_STATUS)
         if (Build.VERSION.SDK_INT >= 33) activity.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
         else activity.registerReceiver(receiver, filter)
