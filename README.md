@@ -6,6 +6,7 @@
 
 - **Registry editor per game.** A game's **Settings** card has **Registry editor (regedit)**. It opens Wine's `regedit` in that game's own prefix, with the same Proton the game uses, inside a Wine desktop the size of the screen. Use it to import a `.reg` file: **Registry › Import Registry File…**. The phone's storage is drive `Z:`, for example `Z:\storage\emulated\0\Download\file.reg`. Works for Steam games, added games and GOG / Epic / Amazon games.
 - **Name:** the app is called **DroidDeck Patched**.
+- **Automatic rotation:** with no orientation picked in Setup, the app follows the sensor between landscape and reverse landscape again, as before 0.6.0 (upstream's fix [#1420](https://github.com/Droid-Deck/DroidDeck/pull/1420), brought to this fork).
 - **Updates:** the Updates page has only the **Stable** channel. It offers the [latest release of this repository](../../releases/latest) that has an APK. The download is checked against the SHA-256 GitHub publishes for it, then against the package name and signing certificate before Android installs it. Preview and test builds of upstream DroidDeck are not offered.
 
 Everything else is DroidDeck 0.6.0 unchanged. The changes are the commits on the default branch after upstream's `0.6.0` tag.
@@ -26,7 +27,7 @@ patched/build-release.sh   # -> patched/out/DroidDeck-Patched-<version>.apk
 
 It compiles the app's Kotlin/Java code and resources and puts them, together with any changed session helper script, into the official upstream APK named in [`patched/upstream.env`](patched/upstream.env). Every native library and Linux runtime file therefore stays byte-for-byte upstream's. The script refuses to run when the branch changes something it cannot carry this way (native code, runtime components): build such a change with upstream's full build, `tools/build_local.sh`, described below.
 
-To publish an update: raise `versionName` (`<upstream version>-patched.<n>`) and `versionCode` (`<upstream versionCode>` × 100 + `<n>`) in `app/build.gradle`, commit, run the script, and create a GitHub release with the tag `v<versionName>` and the APK attached (not a pre-release). Installed copies find it on their Updates page.
+To publish an update: raise `versionName` (this fork's own version, e.g. `0.6.2`; it must compare newer than the installed one) and `versionCode` (by one, e.g. `1503`) in `app/build.gradle`, commit, run the script, and create a GitHub release with the tag `v<versionName>` and the APK attached (not a pre-release). Installed copies find it on their Updates page.
 
 ## Licence and credits
 
@@ -35,7 +36,7 @@ DroidDeck is © its authors and licensed under the [GPL-3.0](LICENSE); this fork
 <details>
 <summary><b>Po polsku</b></summary>
 
-Nieoficjalny fork [DroidDecka](https://github.com/Droid-Deck/DroidDeck) (wersja bazowa 0.6.0). Różnice: w karcie **Ustawienia** gry jest **Edytor rejestru (regedit)**, który otwiera regedit w prefiksie tej gry, żeby wgrać plik `.reg` (*Registry › Import Registry File…*, pamięć telefonu to dysk `Z:`). Aplikacja nazywa się **DroidDeck Patched**, a aktualizacje mają tylko kanał **Stable** pobierany z wydań tego repozytorium. Reszta to niezmieniony DroidDeck 0.6.0.
+Nieoficjalny fork [DroidDecka](https://github.com/Droid-Deck/DroidDeck) (wersja bazowa 0.6.0). Różnice: w karcie **Ustawienia** gry jest **Edytor rejestru (regedit)**, który otwiera regedit w prefiksie tej gry, żeby wgrać plik `.reg` (*Registry › Import Registry File…*, pamięć telefonu to dysk `Z:`). Automatyczne obracanie znowu przełącza między poziomym a odwróconym poziomym, jeśli w ustawieniach nie wybrano stałej orientacji. Aplikacja nazywa się **DroidDeck Patched**, a aktualizacje mają tylko kanał **Stable** pobierany z wydań tego repozytorium. Reszta to niezmieniony DroidDeck 0.6.0.
 
 APK jest podpisany kluczem testowym AOSP, więc przed instalacją trzeba odinstalować oficjalny DroidDeck. To usuwa jego dane. Błędy forka zgłaszaj tutaj, nie autorom DroidDecka.
 </details>
